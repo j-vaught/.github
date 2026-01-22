@@ -20,29 +20,11 @@
 
 | | |
 |:---|:---|
-| 💻 **Lines of Code** | ~<!-- lines-of-code -->~ |
+| ⏱️ **Hours Coded** | ![](https://wakatime.com/badge/user/9d1c4b2c-3c7e-4c3a-9b9a-8e2a3f8c0c52.svg) |
 | 📦 **Public Repos** | <!-- repo-count --> |
+| 💻 **Lines of Code** | ![](https://img.shields.io/badge/dynamic/json?url=https://github.com/j-vaught&query=lines_of_code&style=flat-square&label=Lines&color=green) |
 | ⭐ **Total Stars** | <!-- stars-count --> |
 | 👁 **Profile Views** | ![](https://komarev.com/ghpvc/?username=j-vaught&style=flat-square) |
-
-</div>
-
-<div align="center">
-
-[![Profile Views](https://komarev.com/ghpvc/?username=j-vaught&style=flat-square&color=blueviolet)](https://github.com/j-vaught)
-[![Stars](https://github-readme-stats.vercel.app/api?username=j-vaught&layout=compact&show_icons=true&theme=transparent&hide_border=true&custom_title=Total%20Stars)](https://github.com/j-vaught)
-
-</div>
-
-<div align="center">
-
-### 📈 Quick Stats
-
-| | |
-|:---|:---|
-| 💻 **Lines of Code** | <!-- lines-of-code --> |
-| 📦 **Public Repos** | <!-- repo-count --> |
-| ⭐ **Total Stars** | <!-- stars-count --> |
 
 </div>
 
