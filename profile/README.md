@@ -16,6 +16,36 @@
 
 </div>
 
+<div align="center">
+
+| | |
+|:---|:---|
+| 💻 **Lines of Code** | ~<!-- lines-of-code -->~ |
+| 📦 **Public Repos** | <!-- repo-count --> |
+| ⭐ **Total Stars** | <!-- stars-count --> |
+| 👁 **Profile Views** | ![](https://komarev.com/ghpvc/?username=j-vaught&style=flat-square) |
+
+</div>
+
+<div align="center">
+
+[![Profile Views](https://komarev.com/ghpvc/?username=j-vaught&style=flat-square&color=blueviolet)](https://github.com/j-vaught)
+[![Stars](https://github-readme-stats.vercel.app/api?username=j-vaught&layout=compact&show_icons=true&theme=transparent&hide_border=true&custom_title=Total%20Stars)](https://github.com/j-vaught)
+
+</div>
+
+<div align="center">
+
+### 📈 Quick Stats
+
+| | |
+|:---|:---|
+| 💻 **Lines of Code** | <!-- lines-of-code --> |
+| 📦 **Public Repos** | <!-- repo-count --> |
+| ⭐ **Total Stars** | <!-- stars-count --> |
+
+</div>
+
 ## 📈 Contribution Activity
 
 ![Jacob's GitHub activity graph](https://ghchart.rshah.org/j-vaught)

@@ -1,0 +1,40 @@
+name: Update Profile Stats
+
+on:
+  schedule:
+    - cron: "0 */4 * * *"
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  update_stats:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get user stats
+        id: stats
+        run: |
+          REPO_COUNT=$(gh api users/j-vaught --jq '.public_repos')
+          STAR_COUNT=$(gh api users/j-vaught --jq '.total_stars // 0')
+          
+          echo "repo_count=$REPO_COUNT" >> $GITHUB_OUTPUT
+          echo "star_count=$STAR_COUNT" >> $GITHUB_OUTPUT
+
+      - name: Update README
+        run: |
+          sed -i 's/<!-- repo-count -->/${{ steps.stats.outputs.repo_count }}/' profile/README.md
+          sed -i 's/<!-- stars-count -->/${{ steps.stats.outputs.star_count }}/' profile/README.md
+
+      - name: Commit changes
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add profile/README.md
+          git diff --quiet || git commit -m "Update profile stats"
+          git push
