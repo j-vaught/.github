@@ -16,20 +16,10 @@
 
 </div>
 
-<div align="center">
+## 📝 Code Statistics (excluding LaTeX)
 
-| | |
-|:---|:---|
-| 📦 **Public Repos** | <!-- repo-count --> |
-| ⭐ **Total Stars** | <!-- stars-count --> |
-| 👁 **Profile Views** | ![](https://komarev.com/ghpvc/?username=j-vaught&style=flat-square) |
-
-</div>
-
-## 📁 Languages Breakdown (by repo size)
-
-<!-- languages-breakdown-start -->
-<!-- languages-breakdown-end -->
+<!-- code-stats-start -->
+<!-- code-stats-end -->
 
 ## 📈 Contribution Activity
 

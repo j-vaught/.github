@@ -1,8 +1,8 @@
-name: Update Profile Stats
+name: Update Profile with CLOC
 
 on:
   schedule:
-    - cron: "0 */6 * * *"
+    - cron: "0 */12 * * *"
   workflow_dispatch:
   push:
     branches:
@@ -12,139 +12,131 @@ permissions:
   contents: write
 
 jobs:
-  update_stats:
+  cloc_stats:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
+      - name: Install cloc
+        run: sudo apt-get update && sudo apt-get install -y cloc
 
-      - name: Get GitHub stats via GraphQL
-        id: stats
+      - name: Clone repos and count code
+        id: count
         run: |
+          mkdir -p repos
+          cd repos
+          
+          # Get all repo clone URLs
+          gh repo list j-vaught --limit 100 --json nameWithOwner,cloneUrl -q '.[].cloneUrl' > all_repos.txt
+          
+          total_code=0
+          all_results='{}'
+          
+          while read url; do
+            repo_name=$(basename "$url" .git | tr '[:upper:]' '[:lower:]')
+            
+            # Skip LaTeX/paper repos
+            if [[ "$repo_name" == *"latex"* ]] || [[ "$repo_name" == *"paper"* ]] || \
+               [[ "$repo_name" == *"thesis"* ]] || [[ "$repo_name" == *"dissertation"* ]]; then
+              continue
+            fi
+            
+            if [ ! -d "$repo_name" ]; then
+              git clone --quiet "$url" "$repo_name" 2>/dev/null || continue
+            fi
+            
+            cd "$repo_name"
+            result=$(cloc --quiet --json . 2>/dev/null)
+            cd ..
+            
+            if [ -n "$result" ] && echo "$result" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('SUM',{}).get('code',0))" 2>/dev/null | grep -qE '^[0-9]+$'; then
+              code=$(echo "$result" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('SUM',{}).get('code',0))")
+              total_code=$((total_code + code))
+            fi
+          done < all_repos.txt
+          
+          echo "total_code=$total_code" >> $GITHUB_OUTPUT
+
+      - name: Generate language breakdown
+        id: languages
+        run: |
+          cd repos
+          
+          # Run cloc on all repos and aggregate
+          cloc --by-file --json . > ../cloc_output.json 2>/dev/null || echo '{}' > ../cloc_output.json
+          
           python3 << 'EOF'
-          import os
-          import requests
           import json
-          from datetime import datetime, timedelta
           
-          GITHUB_TOKEN = os.environ['GITHUB_TOKEN']
-          USERNAME = 'j-vaught'
+          with open('cloc_output.json') as f:
+              data = json.load(f)
           
-          # GraphQL query for comprehensive stats
-          graphql_url = 'https://api.github.com/graphql'
-          headers = {
-              'Authorization': f'Bearer {GITHUB_TOKEN}',
-              'Content-Type': 'application/json'
-          }
-          
-          # Get user contributions with commit data
-          query = '''
-          query($login: String!) {
-            user(login: $login) {
-              repositories(first: 100, ownerAffiliations: OWNER, orderBy: {field: UPDATED_AT, direction: DESC}) {
-                nodes {
-                  name
-                  language
-                  defaultBranchRef {
-                    target {
-                      ... on Commit {
-                        history(first: 1) {
-                          nodes {
-                            additions
-                            deletions
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-              contributionsCollection {
-                totalCommitContributions
-                totalPullRequestContributions
-                totalIssueContributions
-              }
-            }
-          }
-          '''
-          
-          response = requests.post(graphql_url, json={'query': query, 'variables': {'login': USERNAME}}, headers=headers)
-          data = response.json()
-          
-          if 'errors' in data:
-              print(f"GraphQL errors: {data['errors']}")
-          
-          user_data = data.get('data', {}).get('user', {})
-          repos = user_data.get('repositories', {}).get('nodes', [])
-          contributions = user_data.get('contributionsCollection', {})
-          
-          # Calculate stats
-          total_commits = contributions.get('totalCommitContributions', 0)
-          total_prs = contributions.get('totalPullRequestContributions', 0)
-          total_issues = contributions.get('totalIssueContributions', 0)
-          
-          # Language breakdown
+          # Filter and aggregate by language
+          exclude_langs = ['TeX', 'LaTeX', 'Markdown', 'HTML', 'CSS', 'JSON', 'YAML', 'XML', 'Dockerfile', 'Shell']
           languages = {}
-          for repo in repos:
-              lang = repo.get('language')
-              if lang:
-                  languages[lang] = languages.get(lang, 0) + 1
           
+          for filename, info in data.items():
+              if filename == 'SUM':
+                  continue
+              lang = info.get('language', 'Unknown')
+              if lang in exclude_langs:
+                  continue
+              code = info.get('code', 0)
+              if lang in languages:
+                  languages[lang] += code
+              else:
+                  languages[lang] = code
+          
+          # Sort and create table
           sorted_langs = sorted(languages.items(), key=lambda x: x[1], reverse=True)
-          total_repos = len([r for r in repos if r.get('language')])
+          total = sum(languages.values())
           
-          lang_badge = "| Language | Repos | % |\n|:---|:---:|---:|\n"
-          for lang, count in sorted_langs[:10]:
-              pct = (count / total_repos * 100) if total_repos > 0 else 0
-              lang_badge += f"| {lang} | {count} | {pct:.1f}% |\n"
+          table = "| Language | Lines | % |\n|:---|---:|---:|\n"
+          for lang, lines in sorted_langs[:10]:
+              pct = (lines / total * 100) if total > 0 else 0
+              table += f"| {lang} | {lines:,} | {pct:.1f}% |\n"
           
-          # Output
-          with open('stats.json', 'w') as f:
-              json.dump({
-                  'total_commits': total_commits,
-                  'total_prs': total_prs,
-                  'total_issues': total_issues,
-                  'repo_count': len(repos),
-                  'languages': lang_badge
-              }, f)
+          with open('../languages.json', 'w') as f:
+              json.dump({'table': table, 'total': total}, f)
           
-          print(f"Commits: {total_commits}, PRs: {total_prs}, Issues: {total_issues}")
-          print(f"Repos: {len(repos)}, Languages: {len(sorted_langs)}")
+          print(f"Total code: {total:,}")
           EOF
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Update README
         run: |
           python3 << 'EOF'
-          import re
           import json
+          import re
           
-          with open('stats.json', 'r') as f:
-              stats = json.load(f)
+          with open('languages.json') as f:
+              lang_data = json.load(f)
           
-          with open('profile/README.md', 'r') as f:
+          with open('profile/README.md') as f:
               content = f.read()
           
-          content = re.sub(r'<!-- repo-count -->', str(stats['repo_count']), content)
+          stats_block = f'''| 💻 **Total Lines of Code** | {lang_data['total']:,} |
+
+{lang_data['table']}'''
           
-          pattern = r'<!-- languages-breakdown-start -->.*<!-- languages-breakdown-end -->'
-          content = re.sub(pattern, f'<!-- languages-breakdown-start -->\n\n{stats["languages"]}\n<!-- languages-breakdown-end -->', content, flags=re.DOTALL)
+          content = re.sub(
+              r'<!-- code-stats-start -->.*<!-- code-stats-end -->',
+              f'<!-- code-stats-start -->\n\n{stats_block}\n<!-- code-stats-end -->',
+              content,
+              flags=re.DOTALL
+          )
           
           with open('profile/README.md', 'w') as f:
               f.write(content)
+          
+          print("Updated README with cloc stats")
           EOF
 
-      - name: Commit changes
+      - name: Commit and push
         run: |
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
           git add profile/README.md
-          git diff --quiet || git commit -m "Update profile stats"
+          git diff --quiet || git commit -m "Update code statistics"
           git push
 
   update_activity:
