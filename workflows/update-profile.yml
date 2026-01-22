@@ -1,144 +1,14 @@
-name: Update Profile with CLOC
+name: Update Profile
 
 on:
   schedule:
-    - cron: "0 */12 * * *"
+    - cron: "0 */6 * * *"
   workflow_dispatch:
-  push:
-    branches:
-      - main
 
 permissions:
   contents: write
 
 jobs:
-  cloc_stats:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install cloc
-        run: sudo apt-get update && sudo apt-get install -y cloc
-
-      - name: Clone repos and count code
-        id: count
-        run: |
-          mkdir -p repos
-          cd repos
-          
-          # Get all repo clone URLs
-          gh repo list j-vaught --limit 100 --json nameWithOwner,cloneUrl -q '.[].cloneUrl' > all_repos.txt
-          
-          total_code=0
-          all_results='{}'
-          
-          while read url; do
-            repo_name=$(basename "$url" .git | tr '[:upper:]' '[:lower:]')
-            
-            # Skip LaTeX/paper repos
-            if [[ "$repo_name" == *"latex"* ]] || [[ "$repo_name" == *"paper"* ]] || \
-               [[ "$repo_name" == *"thesis"* ]] || [[ "$repo_name" == *"dissertation"* ]]; then
-              continue
-            fi
-            
-            if [ ! -d "$repo_name" ]; then
-              git clone --quiet "$url" "$repo_name" 2>/dev/null || continue
-            fi
-            
-            cd "$repo_name"
-            result=$(cloc --quiet --json . 2>/dev/null)
-            cd ..
-            
-            if [ -n "$result" ] && echo "$result" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('SUM',{}).get('code',0))" 2>/dev/null | grep -qE '^[0-9]+$'; then
-              code=$(echo "$result" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('SUM',{}).get('code',0))")
-              total_code=$((total_code + code))
-            fi
-          done < all_repos.txt
-          
-          echo "total_code=$total_code" >> $GITHUB_OUTPUT
-
-      - name: Generate language breakdown
-        id: languages
-        run: |
-          cd repos
-          
-          # Run cloc on all repos and aggregate
-          cloc --by-file --json . > ../cloc_output.json 2>/dev/null || echo '{}' > ../cloc_output.json
-          
-          python3 << 'EOF'
-          import json
-          
-          with open('cloc_output.json') as f:
-              data = json.load(f)
-          
-          # Filter and aggregate by language
-          exclude_langs = ['TeX', 'LaTeX', 'Markdown', 'HTML', 'CSS', 'JSON', 'YAML', 'XML', 'Dockerfile', 'Shell']
-          languages = {}
-          
-          for filename, info in data.items():
-              if filename == 'SUM':
-                  continue
-              lang = info.get('language', 'Unknown')
-              if lang in exclude_langs:
-                  continue
-              code = info.get('code', 0)
-              if lang in languages:
-                  languages[lang] += code
-              else:
-                  languages[lang] = code
-          
-          # Sort and create table
-          sorted_langs = sorted(languages.items(), key=lambda x: x[1], reverse=True)
-          total = sum(languages.values())
-          
-          table = "| Language | Lines | % |\n|:---|---:|---:|\n"
-          for lang, lines in sorted_langs[:10]:
-              pct = (lines / total * 100) if total > 0 else 0
-              table += f"| {lang} | {lines:,} | {pct:.1f}% |\n"
-          
-          with open('../languages.json', 'w') as f:
-              json.dump({'table': table, 'total': total}, f)
-          
-          print(f"Total code: {total:,}")
-          EOF
-
-      - name: Update README
-        run: |
-          python3 << 'EOF'
-          import json
-          import re
-          
-          with open('languages.json') as f:
-              lang_data = json.load(f)
-          
-          with open('profile/README.md') as f:
-              content = f.read()
-          
-          stats_block = f'''| 💻 **Total Lines of Code** | {lang_data['total']:,} |
-
-{lang_data['table']}'''
-          
-          content = re.sub(
-              r'<!-- code-stats-start -->.*<!-- code-stats-end -->',
-              f'<!-- code-stats-start -->\n\n{stats_block}\n<!-- code-stats-end -->',
-              content,
-              flags=re.DOTALL
-          )
-          
-          with open('profile/README.md', 'w') as f:
-              f.write(content)
-          
-          print("Updated README with cloc stats")
-          EOF
-
-      - name: Commit and push
-        run: |
-          git config user.name "GitHub Actions"
-          git config user.email "actions@github.com"
-          git add profile/README.md
-          git diff --quiet || git commit -m "Update code statistics"
-          git push
-
   update_activity:
     runs-on: ubuntu-latest
     steps:
@@ -151,10 +21,10 @@ jobs:
           COMMIT_MSG: "Updated recent activity"
           MAX_LINES: 10
 
-      - name: Commit activity
+      - name: Commit and push
         run: |
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
           git add profile/README.md
-          git diff --quiet || git commit -m "Update recent activity" || true
-          git push || true
+          git diff --quiet || git commit -m "Update recent activity"
+          git push

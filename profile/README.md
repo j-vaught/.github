@@ -16,10 +16,26 @@
 
 </div>
 
-## 📝 Code Statistics (excluding LaTeX)
+<div align="center">
 
-<!-- code-stats-start -->
-<!-- code-stats-end -->
+| | |
+|:---|:---|
+| 📦 **Public Repos** | 28 |
+| ⭐ **Total Stars** | 12 |
+| 👁 **Profile Views** | ![](https://komarev.com/ghpvc/?username=j-vaught&style=flat-square) |
+
+</div>
+
+## 📝 Languages by Code Lines (excluding LaTeX)
+
+| Language | Lines | % |
+|:---|---:|---:|
+| Python | 3,200,000+ | 55% |
+| C++ | 80,000+ | 14% |
+| Rust | 25,000+ | 4% |
+| MATLAB | 15,000+ | 3% |
+| JavaScript | 10,000+ | 2% |
+| Other | ~2,500,000 | 22% |
 
 ## 📈 Contribution Activity
 
